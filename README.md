@@ -3,9 +3,9 @@
 ## On this page
 
 # Table of Contents
-1. [Project Overview](#Project Overview)
-2. [Architecture Overview](#Architecture Overview)
-3. [Getting Started](#Getting Started)
+1. [Project Overview](#Project-Overview)
+2. [Architecture Overview](#Architecture-Overview)
+3. [Getting Started](#Getting-Started)
 4. [License](#License)
 
 ## Project Overview
