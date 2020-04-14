@@ -88,14 +88,14 @@ Once the solution is installed, it will run the next time according to the cron 
     The variable “*job_frequency*”can only take the following values: “*Weekly*”, “*Daily*”, “*Monthly*”.
     Note that this date is in UTC:
     
-    `{
-    "year": "value1",
-    "month": "value2",
-    "day": "value3",
-    "job_frequency": "value4"
+    ```
+    {
+      "year": "value1",
+      "month": "value2",
+      "day": "value3",
+      "job_frequency": "value4"
     }
-    
-    `
+    ```
     * The values provided will be the included END date of the time period.
         For example, providing the following: `{ “year”: “2020”, “month”:“1”, “day”:“31”, “job_frequency”: “Monthly”}` will render the CSV file for the following: 01/01/2020 - 01/31/2020
 * Click “*Create”*.
