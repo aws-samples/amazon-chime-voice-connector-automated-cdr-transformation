@@ -1,4 +1,4 @@
-# Transform and rate CDRs from Amazon Chime Voice Connector and Business Calling - Github repo content
+# Automating the Transformation and Rating of CDR JSON from Amazon Chime Voice Connector
 
 ## Table of Contents
 1. [Project Overview](#Project-Overview)
