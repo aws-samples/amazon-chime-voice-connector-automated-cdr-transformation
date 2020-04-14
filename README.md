@@ -22,9 +22,9 @@ With AWS Lambda, this sample code allows us to retrieve the most recent price ra
 
 Following the above diagram:
 
-* **Step 1: **The Amazon CloudWatch Event Rule periodically invokes the AWS Lambda function .
+* **Step 1:** The Amazon CloudWatch Event Rule periodically invokes the AWS Lambda function .
 * **Step 2:** The AWS Lambda function fetches the current and historic price lists using the AWS Price List API and puts it in your Amazon S3 bucket previously selected as the VC or BC CDR destination in the Chime Management Console
-* **Step 3: **The AWS Lambda function starts the AWS Glue job responsible for the transformation.
+* **Step 3:** The AWS Lambda function starts the AWS Glue job responsible for the transformation.
 * **Step 4:** Once started, AWS Glue job performs the following tasks:
     * Fetch the CDR JSON objects from the Amazon S3 bucket for a specific time period.
     * Transforms the CDR JSON objects to a CSV file.
