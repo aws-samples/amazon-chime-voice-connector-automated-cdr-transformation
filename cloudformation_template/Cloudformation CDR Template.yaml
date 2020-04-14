@@ -1,0 +1,310 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  ServiceName:
+    Type: String
+    Description: Name of the Amazon Chime Service CDR being scanned
+    AllowedValues:
+      - AmazonChimeVoiceConnector
+      - AmazonChimeBusinessCalling
+  JobFrequency:
+    Type: String
+    Description: Frequency of the Summary generation
+    AllowedValues:
+      - Daily
+      - Weekly
+      - Monthly
+  BucketName:
+    Type: String
+    Description: Name of the CDR Bucket that will be scanned
+  ScriptS3Path:
+    Type: String
+    Description: Path to S3 where the script is located (Without "s3://")
+Mappings:
+  ServiceNameWithDash:
+    Amazon-Chime:
+      AmazonChimeVoiceConnector: Amazon-Chime-Voice-Connector
+      AmazonChimeBusinessCalling: Amazon-Chime-Business-Calling
+  CronSchedule:
+    Frequency:
+      Daily: cron(0 1 * * ? *)
+      Weekly: cron(0 1 ? * MON *)
+      Monthly: cron(0 1 1 * ? *)
+Resources:
+  AmazonChimeCDRLambdaRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: AmazonChimeCDRLambdaRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: AmazonChimeGlueJobAccessPolicyForLambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'glue:*'
+                Effect: Allow
+                Resource:
+                  - 'Fn::Join':
+                      - ''
+                      - - 'arn:aws:glue:'
+                        - !Ref 'AWS::Region'
+                        - ':'
+                        - !Ref 'AWS::AccountId'
+                        - ':job/AmazonChimeVCSummaryJob'
+        - PolicyName: AmazonChimeS3CDRAccessPolicyForLambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:*'
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::${BucketName}'
+                  - !Sub 'arn:aws:s3:::${BucketName}/*'
+        - PolicyName: AmazonChimeLogsCDRAccessPolicyForLambda
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'logs:*'
+                Effect: Allow
+                Resource: 'arn:aws:logs:*:*:*'
+  AmazonChimeCDRGlueRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: AmazonChimeCDRGlueRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole'
+      Policies:
+        - PolicyName: AmazonChimeS3CDRAccessPolicyForGlue
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:*'
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::${BucketName}'
+                  - !Sub 'arn:aws:s3:::${BucketName}/*'
+        - PolicyName: AmazonChimeS3GlueScriptAccessPolicyForGlue
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 's3:Get*'
+                  - 's3:List*'
+                Effect: Allow
+                Resource:
+                  - !Sub 'awn:aws:s3:::${ScriptS3Path}'
+  AmazonChimeCDRGlueJob:
+    Type: 'AWS::Glue::Job'
+    Properties:
+      Command:
+        Name: glueetl
+        PythonVersion: 3
+        ScriptLocation: !Sub 's3://${ScriptS3Path}'
+      DefaultArguments:
+        '--BUCKET': !Ref BucketName
+        '--job-bookmark-option': job-bookmark-disable
+        '--YEAR': 2019
+        '--MONTH': 6
+        '--DAY': 10
+        '--JOB_FREQUENCY': !Ref JobFrequency
+        '--PRICINGFILEPATH':
+          'Fn::Sub':
+            - >-
+              s3://${BucketName}/${ServiceNameWithDash}-Pricing/Pricing-per-usageType.csv
+            - BucketName:
+                !Ref BucketName
+              ServiceNameWithDash:
+                'Fn::FindInMap':
+                  - ServiceNameWithDash
+                  - Amazon-Chime
+                  - !Ref ServiceName
+        '--SERVICE':
+          'Fn::FindInMap':
+            - ServiceNameWithDash
+            - Amazon-Chime
+            - !Ref ServiceName
+      Description: Glue Job that summarizes all CDRs to a csv file for a specific month
+      MaxCapacity: 2
+      MaxRetries: 2
+      ExecutionProperty:
+        MaxConcurrentRuns: 10
+      Name: AmazonChimeVCSummaryJob
+      Role: 
+        Fn::GetAtt: [AmazonChimeCDRGlueRole, Arn]
+      Timeout: 2880
+  AmazonChimePriceSaverLambda:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Role:
+        Fn::GetAtt: [AmazonChimeCDRLambdaRole, Arn]
+      FunctionName: !Sub '${ServiceName}-Price-Loader-Lambda'
+      Description: >-
+        Fetches the current AmazonChime Voice Connector Prices from the URL and
+        saves them in the S3 Bucket
+      Handler: index.lambda_handler
+      Environment:
+        Variables:
+          BUCKET:
+            !Ref BucketName
+          SERVICE:
+            'Fn::FindInMap':
+              - ServiceNameWithDash
+              - Amazon-Chime
+              - !Ref ServiceName
+          PRICING_DOMAIN:
+            'https://pricing.us-east-1.amazonaws.com'
+          JOB_FREQUENCY:
+            !Ref JobFrequency
+      Runtime: python3.7
+      Timeout: 100
+      Code:
+        ZipFile: |
+          import csv
+          import io
+          import os
+          import urllib.request
+          import boto3
+          import json
+          from dateutil.relativedelta import relativedelta
+          from datetime import date
+
+          def lambda_handler(event, context):
+              
+              pricing_domain = os.environ['PRICING_DOMAIN']
+              bucket = os.environ['BUCKET']
+              service = os.environ['SERVICE']
+              job_frequency = os.environ['JOB_FREQUENCY']
+              
+              service_without_dash = service.replace('-', '')
+              pricing_url_index = pricing_domain + "/offers/v1.0/aws/" + service_without_dash + "/index.json"
+
+              pricing_urls_pairs = get_pricing_urls_pair_from_json(get_json_from_url(pricing_url_index))
+              
+              pricing_data = get_pricing_data_from_urls(pricing_urls_pairs, pricing_domain)
+              
+              key = service + "-Pricing" + "/" + "Pricing-per-usageType.csv"
+              string_pricing_data = listToString(pricing_data)
+              to_s3(bucket, key, string_pricing_data)
+              
+              pricing_file_path = "s3://" + bucket + "/" + key
+              launch_glue_job(event, bucket, service, pricing_file_path, job_frequency)
+
+          def get_json_from_url(url):
+              with urllib.request.urlopen(url) as url:
+                  return json.loads(url.read().decode())
+              return false
+
+          def get_pricing_urls_pair_from_json(pricing_json):
+              pricing_json = pricing_json["versions"]
+              pricing_urls_pair = []
+              for version in pricing_json:
+                  effective_end_date = '9999-01-01T00:00:00Z'
+                  if pricing_json[version]["versionEffectiveEndDate"]:
+                      effective_end_date = pricing_json[version]["versionEffectiveEndDate"]
+                  pricing_url_pair = [pricing_json[version]["offerVersionUrl"], effective_end_date]
+                  pricing_urls_pair.append(pricing_url_pair)
+              return pricing_urls_pair
+
+          def get_pricing_data_from_urls(pricing_urls_pair, pricing_domain):
+              data = []
+              for pricing_url_pair in pricing_urls_pair:
+                  d = get_data(get_csv_file_from_url(pricing_domain + pricing_url_pair[0].replace('json', 'csv')), pricing_url_pair[1])
+                  if(not data):
+                      data += d
+                  else:
+                      d.pop(0)
+                      data += d
+              return data
+
+          def get_csv_file_from_url(url):
+              ftpstream = urllib.request.urlopen(url)
+              return csv.reader(io.TextIOWrapper(ftpstream))
+
+          def get_data(csvfile, effective_end_date):
+              skip_row = ["FormatVersion", "Disclaimer", "Publication Date", "Version", "OfferCode"]
+              data = []
+              for row in csvfile:
+                  if (row[0] == "SKU"):
+                      row.append("EffectiveEndDate")
+                  else:
+                      row.append(effective_end_date)
+                  if (row[0] not in skip_row):
+                      data.append(row)
+              return data
+              
+          def to_s3(bucket,key, data):
+              s3 = boto3.client('s3')
+              s3.put_object(Bucket=bucket, Key=key, Body=data)
+              
+          def listToString(data):
+              stringData = ""
+              for row in data:
+                  stringData+= ",".join(row) + "\n"
+              return stringData
+              
+          def launch_glue_job(event, bucket, service, pricing_file_path, job_frequency):
+              compute_date = date.today() + relativedelta(days=-1)
+              glue = boto3.client('glue')
+              response = glue.start_job_run(
+                       JobName = 'AmazonChimeVCSummaryJob',
+                       Arguments = {
+                        '--YEAR': event["year"] if "year" in event else compute_date.strftime("%Y"),
+                        '--MONTH':  event["month"] if "month" in event else compute_date.strftime("%-m"),
+                        '--DAY': event["day"] if "day" in event else compute_date.strftime("%-d"),
+                        '--JOB_FREQUENCY': event["job_frequency"] if "job_frequency" in event else job_frequency,
+                        '--BUCKET':   bucket,
+                        '--SERVICE':   service,
+                        '--PRICINGFILEPATH':   pricing_file_path } )
+
+  AmazonChimeCDRSummaryRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Name: AmazonChimeCDRSummaryRule
+      Description: "Event rule that kicks off the Amazon Chime CDR summary ETL Job once a day"
+      ScheduleExpression: 
+        'Fn::FindInMap':
+          - CronSchedule
+          - Frequency
+          - !Ref JobFrequency
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: 
+            Fn::GetAtt: 
+              - "AmazonChimePriceSaverLambda"
+              - "Arn"
+          Id: !Sub '${ServiceName}-Price-Loader-Lambda'
+  PermissionForEventToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: 
+        Ref: "AmazonChimePriceSaverLambda"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: 
+        Fn::GetAtt: 
+          - "AmazonChimeCDRSummaryRule"
+          - "Arn"
