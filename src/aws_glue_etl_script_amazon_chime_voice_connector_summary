@@ -1,0 +1,92 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
+import sys
+import time
+import datetime
+from dateutil.relativedelta import *
+import pyspark.sql.functions as F
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.dynamicframe import DynamicFrame
+from awsglue.job import Job
+from pyspark.sql.functions import from_unixtime
+from pyspark.sql.functions import isnan
+
+## @params: [JOB_NAME]
+args = getResolvedOptions(sys.argv, ['JOB_NAME', 'YEAR', 'MONTH', 'DAY', 'SERVICE', 'BUCKET', 'PRICINGFILEPATH', 'JOB_FREQUENCY'])
+
+year = args['YEAR']
+month = args['MONTH']
+day = args['DAY']
+job_frequency = args['JOB_FREQUENCY']
+compute_end_date = datetime.datetime(int(year), int(month), int(day), 23, 59, 59, 999)
+compute_start_date = compute_end_date
+
+if job_frequency == 'Daily':
+    compute_start_date = compute_end_date - datetime.timedelta(days=-1)
+elif job_frequency == 'Weekly':
+    compute_start_date = compute_end_date - datetime.timedelta(weeks=-1)
+elif job_frequency == 'Monthly':
+    compute_start_date = compute_end_date - relativedelta(months=+1)
+
+service = args['SERVICE']
+bucket = args['BUCKET']
+pricing_file_path = args['PRICINGFILEPATH']
+
+ending_epoch = (compute_end_date - datetime.datetime(1970,1,1)).total_seconds()
+starting_epoch = (compute_start_date - datetime.datetime(1970,1,1)).total_seconds()
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+cdr_s3_path = "s3://" + bucket + "/" + service + "-CDRs/json/"
+cdr_summary_s3_ouptput_path = "s3://" + bucket + "/" + service +"-Summary/csv/" + job_frequency +"/" + year + "/" + month + "/" + day + "/"
+
+cdr_ds = glueContext.create_dynamic_frame.from_options(connection_type="s3", 
+                                                            connection_options = {"paths": [cdr_s3_path], "recurse": True}, 
+                                                            format="json")
+
+cdr_ds = Filter.apply(frame = cdr_ds,
+                              f = lambda x: x["StartTimeEpochSeconds"] < ending_epoch and x["StartTimeEpochSeconds"] >= starting_epoch)
+
+if (cdr_ds.count( ) == 0):
+    cdr_ds = cdr_ds.repartition(1)
+    datasink2 = glueContext.write_dynamic_frame.from_options(frame = cdr_ds,
+                                                                connection_type = "s3",
+                                                                connection_options = {"path": cdr_summary_s3_ouptput_path},
+                                                                format = "csv", transformation_ctx = "datasink2")
+
+else:
+    
+    pricing_ds = glueContext.create_dynamic_frame.from_options(connection_type="s3",
+                                                                    connection_options = {"paths": [pricing_file_path], "recurse": True},
+                                                                    format = "csv",
+                                                                    format_options = { "withHeader" : True})
+    
+    cdr_df = cdr_ds.toDF()
+    pricing_df = pricing_ds.toDF()
+    
+    cdr_df = cdr_df.withColumn("StartTime", from_unixtime(cdr_df.StartTimeEpochSeconds))
+    cdr_df = cdr_df.withColumn("EndTime", from_unixtime(cdr_df.EndTimeEpochSeconds))
+    
+    joined_df = cdr_df.join(pricing_df,
+                            (cdr_df.UsageType == pricing_df.usageType) 
+                                & (pricing_df.EffectiveEndDate.isNull() | (cdr_df.StartTime < pricing_df.EffectiveEndDate) )
+                                & (cdr_df.StartTime >= pricing_df.EffectiveDate),
+                            how='left')
+    joined_df = joined_df.withColumn("Cost", cdr_df.BillableDurationMinutes * pricing_df.PricePerUnit)
+    
+    joined_dynamic_frame = DynamicFrame.fromDF(joined_df, glueContext, "glue_delta")
+    
+    joined_dynamic_frame = joined_dynamic_frame.repartition(1)
+    datasink2 = glueContext.write_dynamic_frame.from_options(frame = joined_dynamic_frame,
+                                                                    connection_type = "s3",
+                                                                    connection_options = {"path": cdr_summary_s3_ouptput_path},
+                                                                    format = "csv", transformation_ctx = "datasink2")
+job.commit()
