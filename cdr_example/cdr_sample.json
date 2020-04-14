@@ -1,0 +1,23 @@
+{
+	"AwsAccountId": "111122223333",
+	"TransactionId": "879eee6e-eec7-4167-b634-a2519506d142",
+	"CallId": "777a6b953100721d372188753f2059a8@203.0.113.9:8080",
+	"VoiceConnectorId": "abcd112222223333334444",
+	"Status": "Completed",
+	"StatusMessage": "OK",
+	"SipAuthUser": "5600",
+	"BillableDurationSeconds": 6,
+	"BillableDurationMinutes": 0.1,
+	"SchemaVersion": "2.0",
+	"SourcePhoneNumber": "+15105551212",
+	"SourceCountry": "US",
+	"DestinationPhoneNumber": "+16285551212",
+	"DestinationCountry": "DE",
+	"UsageType": "USE1-US-US-outbound-minutes",
+	"ServiceCode": "AmazonChimeVoiceConnector",
+	"Direction": "Outbound",
+	"StartTimeEpochSeconds": 1565399625,
+	"EndTimeEpochSeconds": 1565399629,
+	"Region": "us-east-1",
+	"Streaming": true
+}
