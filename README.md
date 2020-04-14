@@ -23,9 +23,9 @@ With AWS Lambda, this sample code allows us to retrieve the most recent price ra
 
 Following the above diagram:
 
-* **Step 1: **The Amazon CloudWatch Event Rule periodically invokes the AWS Lambda function .
+* **Step 1:** The Amazon CloudWatch Event Rule periodically invokes the AWS Lambda function .
 * **Step 2:** The AWS Lambda function fetches the current and historic price lists using the AWS Price List API and puts it in your Amazon S3 bucket previously selected as the VC or BC CDR destination in the Chime Management Console
-* **Step 3: **The AWS Lambda function starts the AWS Glue job responsible for the transformation.
+* **Step 3:** The AWS Lambda function starts the AWS Glue job responsible for the transformation.
 * **Step 4:** Once started, AWS Glue job performs the following tasks:
     * Fetch the CDR JSON objects from the Amazon S3 bucket for a specific time period.
     * Transforms the CDR JSON objects to a CSV file.
@@ -36,7 +36,7 @@ Following the above diagram:
 
 ### Upload the AWS Glue ETL script to S3:
 
-We first start by uploading the “*aws_glue_etl_script_amazon_chime_voice_connector_summary*” script file needed for the summary generator to a location of your choice in S3. After the script has been uploaded, make sure to save the path of the file is saved on the side as it will be needed for the resource creation.
+We first start by uploading the “*aws_glue_etl_script_amazon_chime_voice_connector_summary*” script file (located in the src folder) needed for the summary generator to a location of your choice in S3. After the script has been uploaded, make sure to save the path of the file is saved on the side as it will be needed for the resource creation.
  
 
 ### Deploy the resources using CloudFormation template:
