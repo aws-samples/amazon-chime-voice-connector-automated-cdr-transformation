@@ -1,8 +1,6 @@
 # Transform and rate CDRs from Amazon Chime Voice Connector and Business Calling - Github repo content
 
-## On this page
-
-# Table of Contents
+## Table of Contents
 1. [Project Overview](#Project-Overview)
 2. [Architecture Overview](#Architecture-Overview)
 3. [Getting Started](#Getting-Started)
