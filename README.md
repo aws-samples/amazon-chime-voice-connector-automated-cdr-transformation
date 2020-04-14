@@ -8,24 +8,23 @@
 
 ## Project Overview
 
-The purpose of this project is to provide you with a sample code and a fully automated example that ingests the Amazon Chime Voice Connector call detailed record (CDR) objects from a S3 bucket and generates a comma-delimited (CSV) file with all CDR’s. You should consider testing and modifying the IAM roles and any other component of this solution according to your security and compliance requirements. Please note that the CloudFormation script will have to be installed in the US-EAST-1 region.  For the purposes of this blog post, we will be working with Amazon Chime Voice Connector CDR’s.  
+The purpose of this project is to provide you with a sample code and a fully automated example that ingests the Amazon Chime Voice Connector [Call Detailed Record](https://docs.aws.amazon.com/chime/latest/ag/manage-global.html#call-detail) (CDR) objects from a S3 bucket and generates a comma-delimited (CSV) file with all CDR’s. You should consider testing and modifying the IAM roles and any other component of this solution according to your security and compliance requirements. Please note that the CloudFormation template will have to be installed in the US-EAST-1 region. There is no additional charge for using AWS CloudFormation, and in this example, you only pay for the AWS resources that are created using AWS CloudFormation, as you use them.  For the purposes of this blog post, we will be working with Amazon Chime Voice Connector CDR’s.  
 
 ## Architecture Overview
 
 ![CDR_solution_architecture.jpg](images/CDR_solution_architecture.jpg)
 
-
 ### How It Works
 
-This solution can be configured using the following services: AWS Lambda, AWS Glue, Amazon S3 and AWS Cloudwatch rules.
+This solution can be configured using the following services: AWS Lambda, AWS Glue, Amazon S3, and AWS Cloudwatch rules.
 
-With AWS Lambda, this sample code allows us to retrieve the most recent price rates for Amazon Chime Voice Connector from the AWS Price List API and save it in an S3 bucket for later use. While the AWS Glue job sample code enables us to crawl the CDR bucket and retrieve all CDR JSON objects for a time period, then transform all CDR JSON objects into a CSV file, then subsequently rate all CDRs using the most recent price rates to finally load the CSV file to the S3 bucket.
+With AWS Lambda, this sample code allows us to retrieve the most recent price rates for Amazon Chime Voice Connector from the AWS Price List API and save it in an S3 bucket for later use. While the AWS Glue job sample code enables us to crawl the CDR bucket and retrieve all CDR JSON objects for a time period, then transform all CDR JSON objects into a CSV file, then subsequently add rates to CDRs using the most recent price rates to finally load the CSV file to the S3 bucket.
 
 Following the above diagram:
 
-* **Step 1:** The Amazon CloudWatch Event Rule periodically invokes the AWS Lambda function .
+* **Step 1: **The Amazon CloudWatch Event Rule periodically invokes the AWS Lambda function .
 * **Step 2:** The AWS Lambda function fetches the current and historic price lists using the AWS Price List API and puts it in your Amazon S3 bucket previously selected as the VC or BC CDR destination in the Chime Management Console
-* **Step 3:** The AWS Lambda function starts the AWS Glue job responsible for the transformation.
+* **Step 3: **The AWS Lambda function starts the AWS Glue job responsible for the transformation.
 * **Step 4:** Once started, AWS Glue job performs the following tasks:
     * Fetch the CDR JSON objects from the Amazon S3 bucket for a specific time period.
     * Transforms the CDR JSON objects to a CSV file.
@@ -36,7 +35,7 @@ Following the above diagram:
 
 ### Upload the AWS Glue ETL script to S3:
 
-We first start by uploading the “*aws_glue_etl_script_amazon_chime_voice_connector_summary*” script file (located in the src folder) needed for the summary generator to a location of your choice in S3. After the script has been uploaded, make sure to save the path of the file is saved on the side as it will be needed for the resource creation.
+We first start by uploading the “*aws_glue_etl_script_amazon_chime_voice_connector_summary*” script file needed for the summary generator to a location of your choice in S3. After the script has been uploaded, make sure to save the path of the file is saved on the side as it will be needed for the resource creation.
  
 
 ### Deploy the resources using CloudFormation template:
@@ -55,9 +54,9 @@ We first start by uploading the “*aws_glue_etl_script_amazon_chime_voice_conne
     * *JobFrequency*:  The period of time for which the job will be executed.  
         * Note that the job will run 3 hours after the specified time, and it will generate the CDRs up to the specified time.
         * The default *JobFrequency *options are:
-            * Daily at 00:00 UTC
-            * Weekly on Monday at 00:00 UTC
-            * Monthly on the 1st of every month at 00:00 UTC
+            * Daily at 01:00 UTC
+            * Weekly on Monday at 01:00 UTC
+            * Monthly on the 1st of every month at 01:00 UTC
     * *ScriptS3Path*: The path of the uploaded script without “s3://” (Uploaded in the previous section)
     * *ServiceName*: AmazonChimeVoiceConnector
     * Click “*Next*“.
@@ -86,14 +85,15 @@ Once the solution is installed, it will run the next time according to the cron 
     The variable “*job_frequency*”can only take the following values: “*Weekly*”, “*Daily*”, “*Monthly*”.
     Note that this date is in UTC:
     
-    `{
+    ```
+    {
     "year": "value1",
     "month": "value2",
     "day": "value3",
     "job_frequency": "value4"
     }
     
-    `
+    ```
     * The values provided will be the included END date of the time period.
         For example, providing the following: `{ “year”: “2020”, “month”:“1”, “day”:“31”, “job_frequency”: “Monthly”}` will render the CSV file for the following: 01/01/2020 - 01/31/2020
 * Click “*Create”*.
