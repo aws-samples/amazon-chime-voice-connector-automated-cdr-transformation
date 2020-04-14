@@ -50,7 +50,9 @@ We first start by uploading the "*aws_glue_etl_script_amazon_chime_voice_connect
 ![image1](images/image1.png)
 * Select "*Template is ready*" in the "*Prerequisite*" section, and then select "*Upload a template file*" in the "*Specify template*" section.  
 * Click "*Choose file*", select and upload the CloudFormation template "*Cloudformation CDR Template.yaml*" file, then click "*Next*".
+
 ![image2](images/image2.png)
+
 * In the "*Specify stack details*" screen, enter a Stack Name of your choice (e.g., AmazonChimeVCSummaryStack)
 * In the "*Parameters*" section, fill out the following fields:
     * *BucketName*: The name of the bucket where all the CDRs reside.
@@ -63,10 +65,13 @@ We first start by uploading the "*aws_glue_etl_script_amazon_chime_voice_connect
     * *ScriptS3Path*: The path of the uploaded script without "s3://" (Uploaded in the previous section)
     * *ServiceName*: AmazonChimeVoiceConnector
     * Click "*Next*".
+    
 ![image3](images/image3.png)
+
 * The configuration parameters in the "*Configure stack options*" and "*Advanced options*" are optional.
 * Click "*Next"*.
 * In the "*Review Stack*" screen, acknowledge that AWS CloudFormation might create IAM resources with custom names, then click "*Create Stack"*.
+
 ![image4](images/image4.png)
 
  
@@ -82,7 +87,9 @@ Once the solution is installed, it will run the next time according to the cron 
 * On the AWS console, navigate to AWS Lambda Service.
 * Search for the function: "*AmazonChimeVoiceConnector-Price-Loader-Lambda*" and click on the link name to open it.
 * On the top right, click "*Test*", or on the drop down menu next to "*Test*" to open the "*Configure test event*" dialog.
+
 ![image5](images/image5.png)
+
 *  In the "*Configure test event*" dialog, enter the even name in "*Event Name"*, for example "*SpecificTimeframe*".
 * In the parameter box, copy and paste the following block and fill out the values for the "*year*", "*month"* and "*day"* variables, namely value1, value2 and value3 as desired.  
     The variable "*job_frequency*"can only take the following values: "*Weekly*", "*Daily*", "*Monthly*".
@@ -100,6 +107,7 @@ Once the solution is installed, it will run the next time according to the cron 
         For example, providing the following: `{ "year": "2020", "month":"1", "day":"31", "job_frequency": "Monthly"}` will render the CSV file for the following: 01/01/2020 - 01/31/2020
 * Click "*Create"*.
 * Click "*Test*".
+
 ![image7](images/image7.png)
 
 
