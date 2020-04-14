@@ -74,7 +74,7 @@ If you want to change the job frequency period, you will have to edit the CloudW
 
 ### How to run the script for previous days:
 
-Once the solution is installed, it will run the next time according to the cron expression settings of the CloudWatch rule.  
+Once the solution is installed, it will run the next time according to the cron expression settings of the CloudWatch rule. 
 
 * On the AWS console, navigate to AWS Lambda Service.
 * Search for the function: “*AmazonChimeVoiceConnector-Price-Loader-Lambda*” and click on the link name to open it.
