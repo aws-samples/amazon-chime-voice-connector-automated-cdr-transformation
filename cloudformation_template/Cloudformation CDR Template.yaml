@@ -115,7 +115,7 @@ Resources:
                   - 's3:List*'
                 Effect: Allow
                 Resource:
-                  - !Sub 'awn:aws:s3:::${ScriptS3Path}'
+                  - !Sub 'arn:aws:s3:::${ScriptS3Path}'
   AmazonChimeCDRGlueJob:
     Type: 'AWS::Glue::Job'
     Properties:
