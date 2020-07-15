@@ -26,11 +26,11 @@ compute_end_date = datetime.datetime(int(year), int(month), int(day), 23, 59, 59
 compute_start_date = compute_end_date
 
 if job_frequency == 'Daily':
-    compute_start_date = compute_end_date - datetime.timedelta(days=-1)
+    compute_start_date = compute_end_date + datetime.timedelta(days=-1)
 elif job_frequency == 'Weekly':
-    compute_start_date = compute_end_date - datetime.timedelta(weeks=-1)
+    compute_start_date = compute_end_date + datetime.timedelta(weeks=-1)
 elif job_frequency == 'Monthly':
-    compute_start_date = compute_end_date - relativedelta(months=+1)
+    compute_start_date = compute_end_date + relativedelta(months=-1)
 
 service = args['SERVICE']
 bucket = args['BUCKET']
