@@ -246,12 +246,18 @@ Resources:
           def get_data(csvfile, effective_end_date):
               skip_row = ["FormatVersion", "Disclaimer", "Publication Date", "Version", "OfferCode"]
               data = []
+              isNewData = False
               for row in csvfile:
                   if (row[0] == "SKU"):
                       row.append("EffectiveEndDate")
+                      if (row[17] != "CallType"):
+                          isNewData = True
                   else:
                       row.append(effective_end_date)
                   if (row[0] not in skip_row):
+                      if isNewData:
+                          row.insert(17, "")
+                          row.insert(19, "")
                       data.append(row)
               return data
               
